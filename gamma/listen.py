@@ -1,10 +1,13 @@
 """
 ./gamma/listen.py
+
+listen.py actively listens for connections and creates a
+new thread targeted at `connection.Connection` which then
+starts the PLAYER <--> PROXY <--> SERVER connections
 """
 import socket
 from .connection import Connection
 import threading
-import time
 
 
 class Listen:

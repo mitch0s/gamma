@@ -11,7 +11,7 @@ import time
 
 class Connection:
     def __init__(self, **kwargs):
-        self.debug = True
+        self.debug = False
 
         # PROXY <---> SERVER connection
         self.upstream_conn = None # socket object for the CLIENT <---> PROXY connection
@@ -34,7 +34,7 @@ class Connection:
 
         # Address, Port attributed to each connection
         self.downstream_address = kwargs['downstream_addr']
-        self.upstream_address = (None, None)
+        self.upstream_address = (None, None, None)
 
         # MISC CHECKS
         self.found_player_username = False
@@ -49,8 +49,11 @@ class Connection:
         # Finds hostname from within the first packet
         self.conn_hostname = packet.get_conn_hostname(data)
 
-        # Gets backend (ip, port) for hostname
+        # Gets backend (ip, port, proxy_protocol) for hostname
         self.upstream_address = server.get_server_backend(self.conn_hostname)
+
+        if self.upstream_address[2] == True:
+            data = b'PROXY TCP4 ' + self.downstream_address[0].encode() + b' 255.255.255.255 ' + str(self.downstream_address[1]).encode() + b' 25565\r\n' + data
 
         # If the IP for hostname == None (Not found), return
         # invalid hostname motd to the downstream connection
@@ -86,11 +89,11 @@ class Connection:
                     self.conn_bandwidth += len(data)
                     self.downstream_conn.send(data)
 
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 5:
-                    self.conn_alive = False
+                if self.conn_type == 'PING' and self.upstream_conn_packets >= 2:
                     self.on_ping()
+                    self.conn_alive = False
 
-            self.upstream_conn.close() # Close the connection if self.conn_alive == False
+            self.upstream_conn.close()  # Close the connection if self.conn_alive == False
 
         except Exception as error:
             self.conn_alive = False
@@ -132,9 +135,9 @@ class Connection:
                         if self.player_username is not None and self.conn_type:
                             self.on_player_connect()
 
-                if self.conn_type == 'PING' and self.downstream_conn_packets >= 5:
-                    self.conn_alive = False
+                if self.conn_type == 'PING' and self.upstream_conn_packets >= 2:
                     self.on_ping()
+                    self.conn_alive = False
 
             self.downstream_conn.close() # Close the connection if self.conn_alive == False
 
@@ -144,6 +147,7 @@ class Connection:
             if self.debug:
                 traceback.print_exc()
 
+
             sys.exit()
 
 
@@ -151,7 +155,6 @@ class Connection:
         """
         Runs code when a request is made to the proxy
         """
-
         raise NotImplementedError('This feature will be added later')
 
     def on_ping(self):
@@ -172,5 +175,5 @@ class Connection:
         """
         Runs code upon connection loss
         """
-        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]}) LEFT {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
+        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]})  LEFT  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
         print(f'[?] Connection used {self.conn_bandwidth/1000000}MB of bandwidth!')
