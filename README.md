@@ -7,6 +7,8 @@
 
 Gamma is a reverse-TCP proxy implemented in Python using the `Socket` package.
 
+Please be kind, I'm still a student in highschool so a lot of my workarounds for some problems may be slightly messy :)
+
 ### Features
 - Multiple Players
   - The proxy supports multiple player connections simultaneously
