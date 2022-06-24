@@ -1,4 +1,6 @@
-![Gamma Logo](https://i.ibb.co/8K4c6Mc/ezgif-2-b1c4d759f1.png)
+<p align="center" width="100%">
+    <img width="50%" src="https://i.ibb.co/8K4c6Mc/ezgif-2-b1c4d759f1.png">
+</p>
 
 # Gamma
 ### A Minecraft proxy implemented in Python
