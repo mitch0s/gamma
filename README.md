@@ -25,4 +25,4 @@ Please be kind, I'm still a student in highschool so a lot of my workarounds for
 
 
 ### Similar Projects
-I would have to say that the biggest inspiration for this project would have to be [infrared](github.com/haveachin/infrared) by [haveachin](github.com/haveachin)
+I would have to say that the biggest inspiration for this project would have to be [infrared](https://github.com/haveachin/infrared) by [haveachin](https://github.com/haveachin)
