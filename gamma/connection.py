@@ -54,6 +54,8 @@ class Connection:
 
         if self.upstream_address[2] == True:
             data = b'PROXY TCP4 ' + self.downstream_address[0].encode() + b' 255.255.255.255 ' + str(self.downstream_address[1]).encode() + b' 25565\r\n' + data
+        if self.debug:
+            print(data)
 
         # If the IP for hostname == None (Not found), return
         # invalid hostname motd to the downstream connection
@@ -62,8 +64,9 @@ class Connection:
             self.conn_alive = False
             sys.exit()
 
-        threading.Thread(target=self.upstream, kwargs={'data': data}).start()  # Starts a `PROXY <---> SERVER` thread
-        threading.Thread(target=self.downstream).start()  # Starts a `CLIENT <---> PROXY` thread
+        threading.Thread(target=self.upstream).start()  # Starts a `PROXY <---> SERVER` thread
+
+        threading.Thread(target=self.downstream, kwargs={'data': data}).start()  # Starts a `CLIENT <---> PROXY` thread
 
         sys.exit()
 
@@ -74,22 +77,20 @@ class Connection:
             self.upstream_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.upstream_conn.connect((self.upstream_address[0], self.upstream_address[1]))
 
-            time.sleep(0.1)
-
             self.upstream_conn_packets = 0
 
-            if 'data' in kwargs:
-                self.upstream_conn.send(kwargs['data'])
-
             while self.conn_alive:
-                data = self.upstream_conn.recv(8192)
+                data = self.upstream_conn.recv(16384)
 
                 if data:
+                    if self.debug:
+                        print('[<]', data)
+
                     self.upstream_conn_packets += 1
                     self.conn_bandwidth += len(data)
                     self.downstream_conn.send(data)
 
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 2:
+                if self.conn_type == 'PING' and self.upstream_conn_packets >= 3:
                     self.on_ping()
                     self.conn_alive = False
 
@@ -111,19 +112,23 @@ class Connection:
         PLAYER <--> PROXY
         """
 
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         self.downstream_conn_packets = 0
         self.missed_downstream_packets = 0
 
         try:
 
-            time.sleep(0.5)
+            if 'data' in kwargs:
+                self.upstream_conn.send(kwargs['data'])
 
             while self.conn_alive:
-                data = self.downstream_conn.recv(8192)
+                data = self.downstream_conn.recv(16384)
 
                 if data:
+                    if self.debug:
+                        print('[>]', data)
+
                     self.downstream_conn_packets += 1
 
                     self.conn_bandwidth += len(data) # Adds packet length to bandwidth counter
@@ -135,7 +140,7 @@ class Connection:
                         if self.player_username is not None and self.conn_type:
                             self.on_player_connect()
 
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 2:
+                if self.conn_type == 'PING' and self.upstream_conn_packets >= 5:
                     self.on_ping()
                     self.conn_alive = False
 
