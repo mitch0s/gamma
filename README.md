@@ -7,6 +7,8 @@
 
 Gamma is a reverse-TCP proxy for Minecraft networks implemented in Python using the `Socket` package. Gamma supports multiple client connections to multiple servers. Players are proxied to the respective server depending on the hostname included in the first connection packet.
 
+Join our (Discord Server)[https://discord.gg/NPyG3gAVtC]!
+
 ### Features
 - Proxy Protocol
   - Gamma supports sending the `proxy protocol v1` heading to the server to forward player IPs
