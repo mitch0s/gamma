@@ -4,7 +4,7 @@
 import sys
 import threading
 import traceback
-
+import os
 from .util import *
 import socket
 import time
@@ -12,6 +12,11 @@ import time
 class Connection:
     def __init__(self, **kwargs):
         self.debug = False
+        self.debug_settings = {
+            'print_upstream': True,
+            'print_downstream': True,
+            'print_exceptions': True
+        }
 
         # PROXY <---> SERVER connection
         self.upstream_conn = None # socket object for the CLIENT <---> PROXY connection
@@ -31,6 +36,10 @@ class Connection:
 
         # Total bandwidth used by connection
         self.conn_bandwidth = 0
+
+        # Total upstream/downstream packets
+        self.downstream_packet_count = 0
+        self.upstream_packet_count = 0
 
         # Address, Port attributed to each connection
         self.downstream_address = kwargs['downstream_addr']
@@ -54,7 +63,7 @@ class Connection:
 
         if self.upstream_address[2] == True:
             data = b'PROXY TCP4 ' + self.downstream_address[0].encode() + b' 255.255.255.255 ' + str(self.downstream_address[1]).encode() + b' 25565\r\n' + data
-        if self.debug:
+        if self.debug and self.debug_settings['print_upstream']:
             print(data)
 
         # If the IP for hostname == None (Not found), return
@@ -80,21 +89,26 @@ class Connection:
             self.upstream_conn_packets = 0
 
             while self.conn_alive:
-                data = self.upstream_conn.recv(16384)
+                data = self.upstream_conn.recv(8192)
 
                 if data:
-                    if self.debug:
+                    if self.debug and self.debug_settings['print_upstream']:
                         print('[<]', data)
+
+                    self.last_upstream_packet = time.time()
 
                     self.upstream_conn_packets += 1
                     self.conn_bandwidth += len(data)
+
                     self.downstream_conn.send(data)
 
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 3:
+                # Breaks the connection if the last PING packet was more than 5 seconds ago
+                if self.conn_type == 'PING' and time.time() - self.last_upstream_packet > 2:
                     self.on_ping()
                     self.conn_alive = False
 
             self.upstream_conn.close()  # Close the connection if self.conn_alive == False
+            sys.exit()
 
         except Exception as error:
             self.conn_alive = False
@@ -114,37 +128,35 @@ class Connection:
 
         time.sleep(0.5)
 
-        self.downstream_conn_packets = 0
-        self.missed_downstream_packets = 0
-
         try:
 
             if 'data' in kwargs:
                 self.upstream_conn.send(kwargs['data'])
 
             while self.conn_alive:
-                data = self.downstream_conn.recv(16384)
+                if self.conn_type == 'PING' and self.upstream_conn_packets >= 5:
+                    self.on_ping()
+                    self.conn_alive = False
+
+                data = self.downstream_conn.recv(8192)
 
                 if data:
-                    if self.debug:
-                        print('[>]', data)
+                    if self.debug and self.debug_settings['print_downstream']:
+                        print(f'[>]', data)
 
-                    self.downstream_conn_packets += 1
+                    if self.downstream_packet_count == 0 and self.conn_type == 'PLAY':
+                        self.player_username = packet.get_player_username(data)
+                        self.on_player_connect()
+
+                    self.downstream_packet_count += 1
 
                     self.conn_bandwidth += len(data) # Adds packet length to bandwidth counter
 
                     self.upstream_conn.send(data) # Relays the data received to the upstream conn (server)
 
-                    if self.player_username is None and self.conn_type in ['PLAY', 'UNKNOWN']: # Checks all packets until a username is found
-                        self.player_username = packet.get_player_username(data)
-                        if self.player_username is not None and self.conn_type:
-                            self.on_player_connect()
-
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 5:
-                    self.on_ping()
-                    self.conn_alive = False
 
             self.downstream_conn.close() # Close the connection if self.conn_alive == False
+            sys.exit()
 
         except Exception as error:
             self.conn_alive = False

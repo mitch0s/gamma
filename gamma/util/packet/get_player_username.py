@@ -4,7 +4,7 @@ def get_player_username(data):
 
         if b'\xbc\x06\x00\x07' in data: # 1.19.X
             data = data[4:].split(b'\x01\x00\x00\x01')
-            data = data[0]
+            data = data[0].replace(b'\xbc\x06\x00\x07', b'')
             return data.decode()
 
         else: # All other protocols
@@ -13,5 +13,5 @@ def get_player_username(data):
 
             return username
 
-    except IndexError:
+    except Exception:
         return None
