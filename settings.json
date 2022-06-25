@@ -1,0 +1,10 @@
+{
+   "config_path": "./configs",
+   "messages": {
+      "invalid_hostname": {
+          "icon_path": "./gamma/images/gamma_logo.png",
+          "motd": "Invalid hostname",
+          "version": "Gamma Proxy"
+    }
+  }
+}

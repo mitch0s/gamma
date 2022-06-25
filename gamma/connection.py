@@ -4,7 +4,6 @@
 import sys
 import threading
 import traceback
-import os
 from .util import *
 import socket
 import time
