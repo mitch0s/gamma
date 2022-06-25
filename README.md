@@ -1,5 +1,5 @@
 <p align="center" width="100%">
-    <img width="30%" src="https://i.ibb.co/8K4c6Mc/ezgif-2-b1c4d759f1.png">
+<img width="30%" src="https://i.ibb.co/8K4c6Mc/ezgif-2-b1c4d759f1.png">
 </p>
 
 # Gamma
@@ -30,3 +30,18 @@ I would have to say that the biggest inspiration for this project would have to 
 ### Notes
 - Proxy Protocol
   - Please be aware that when `proxy-protocol` is enabled, the server that the players will be proxied to has to be able to understand and read the proxy protocol header. Without this, the server can't understand the packet and drops it. If you're using `Waterfall`, you can turn set `proxy-protocol: true` in config.yml. Other server types normally have plugins to parse this kind of data.
+
+
+### The Connection Object
+
+|           Variable           |     Type      |                                               Description                                               |
+|:----------------------------:|:-------------:|:-------------------------------------------------------------------------------------------------------:|
+|      self.upstream_conn      | Socket Object |           The Socket object that contains the connection between the `server` and the `proxy`           |
+|     self.downstream_conn     | Socket Object |           The Socket object that contains the connection between the `player` and the `proxy`           |
+|   self.downstream_address    |     Tuple     |          A tuple that contains the `players` ip and port in the format `(ip: str, port: int)`           |
+|       self.conn_alive        |    Boolean    | Determines whether the connection is active or disconnected, `True = Connected`, `False = Disconnected` |
+|  self.upstream_packet_count  |    Integer    |                    The total number of packets transferred, from `Server` to `Gamma`                    |
+| self.downstream_packet_count |    Integer    |                    The total number of packets transferred from `Player` to `Gamma`                     |
+|     self.conn_bandwidth      |    Integer    |         The total amount of bytes proxied from both the `upstream` and `downstream` connections         |
+|      self.conn_hostname      |    String     |                  The hostname that the player has connected to from their server list                   |
+|     self.player_username     |    String     |              The username of the proxied player, can be None if a username isn't detected               |
