@@ -60,6 +60,7 @@ class Connection:
         # Gets backend (ip, port, proxy_protocol) for hostname
         self.upstream_address = server.get_server_backend(self.conn_hostname)
 
+        # Appends the v1 proxy protocol schema if enabled
         if self.upstream_address[2] == True:
             data = b'PROXY TCP4 ' + self.downstream_address[0].encode() + b' 255.255.255.255 ' + str(self.downstream_address[1]).encode() + b' 25565\r\n' + data
         if self.debug and self.debug_settings['print_upstream']:
@@ -67,8 +68,16 @@ class Connection:
 
         # If the IP for hostname == None (Not found), return
         # invalid hostname motd to the downstream connection
-        if self.upstream_address[0] is None:
-            self.downstream_conn.send(message.unknown_hostname_motd())
+        if self.upstream_address[0] is None and self.conn_type == 'PING':
+            self.downstream_conn.send(message.invalid_hostname_motd())
+            self.conn_alive = False
+            self.on_invalid_hostname_ping()
+            sys.exit()
+
+        # Sends disconnect message if connection is `PLAY` and
+        # no server config is found
+        if self.upstream_address[0] is None and self.conn_type == 'PLAY':
+            self.downstream_conn.send(message.invalid_hostname_disconnect())
             self.conn_alive = False
             sys.exit()
 
@@ -83,7 +92,18 @@ class Connection:
     def upstream(self, **kwargs):
         try:
             self.upstream_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.upstream_conn.connect((self.upstream_address[0], self.upstream_address[1]))
+            self.upstream_conn.settimeout(2)
+
+            try:
+                self.upstream_conn.connect((self.upstream_address[0], self.upstream_address[1]))
+            except TimeoutError:
+                if self.conn_type == 'PING':
+                    self.downstream_conn.send(message.server_offline_motd())
+                if self.conn_type == 'PLAY':
+                    self.downstream_conn.send(message.server_offline_disconnect())
+
+                self.conn_alive = False
+                self.on_server_offline()
 
             self.upstream_conn_packets = 0
 
@@ -96,12 +116,12 @@ class Connection:
 
                     self.last_upstream_packet = time.time()
 
-                    self.upstream_conn_packets += 1
-                    self.conn_bandwidth += len(data)
+                    self.upstream_conn_packets += 1 # Adds 1 to upstream packet counter
+                    self.conn_bandwidth += len(data) # Adds packet length to bandwidth counter
 
                     self.downstream_conn.send(data)
 
-                # Breaks the connection if the last PING packet was more than 5 seconds ago
+                # Breaks the connection if the last PING packet was more than 2 seconds ago
                 if self.conn_type == 'PING' and time.time() - self.last_upstream_packet > 2:
                     self.on_ping()
                     self.conn_alive = False
@@ -124,7 +144,6 @@ class Connection:
         """
         PLAYER <--> PROXY
         """
-
         time.sleep(0.5)
 
         try:
@@ -163,7 +182,6 @@ class Connection:
             if self.debug:
                 traceback.print_exc()
 
-
             sys.exit()
 
 
@@ -179,12 +197,18 @@ class Connection:
         """
         print(f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]}) PINGED {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
 
+    def on_invalid_hostname_ping(self):
+        """
+        Runs code when a ping requests an invalid hostname
+        """
+        print(
+            f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]}) PINGED {self.conn_hostname} [INVALID HOSTNAME]')
 
     def on_player_connect(self):
         """
         Runs code when a new connection to a server is made
         """
-        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]}) JOINED {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
+        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]})  JOINED  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
 
 
     def on_player_disconnect(self):
@@ -193,3 +217,11 @@ class Connection:
         """
         print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]})  LEFT  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
         print(f'[?] Connection used {self.conn_bandwidth/1000000}MB of bandwidth!')
+
+    def on_server_offline(self):
+        """
+        Runs code after a connection is closed due to
+        the server being unresponsive during connection
+        """
+        print( f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]})  CONNECTION FAILED  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]}) [SERVER OFFLINE]')
+

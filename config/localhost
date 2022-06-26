@@ -1,0 +1,6 @@
+{
+  "hostname": "0.0.0.0",
+  "host": "123.123.123.123",
+  "port": 25565,
+  "proxy_protocol": false
+}

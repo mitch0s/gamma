@@ -3,8 +3,16 @@
    "messages": {
       "invalid_hostname": {
           "icon_path": "./gamma/images/gamma_logo.png",
-          "motd": "Invalid hostname",
+          "disconnect_message": "\\u00a78\\u00a7m----------------------------------------\\u00a7r\\n\\n\\u00a75Invalid hostname\\u00a7r\\n\\n\\u00a77\\u00a7oPlease refer to our documentation at\\u00a77\\u00a7o github.com\\/mitch0s\\/gamma\\u00a7r\\n\\n\\n\\n\\u00a78Gamma Minecraft Proxy\\u00a7r\\n\\n\\u00a78\\u00a7m----------------------------------------",
+          "motd": "\\u00a75Invalid hostname. \\u00a77\\u00a7oPlease refer to our documentation at\\u00a77\\u00a7o github.com\\/mitch0s\\/gamma\\u00a7r\\n\\n\\n\\n\\u00a78Gamma Minecraft Proxy\\u00a7r\\n\\n\\u00a78\\u00a7m----------------------------------------",
           "version": "Gamma Proxy"
-    }
+    },
+
+      "server_offline": {
+          "icon_path": "./gamma/images/gamma_logo.png",
+          "disconnect_message": "\\u00a78\\u00a7m----------------------------------------\\u00a7r\\n\\n\\u00a75Can't connect to server\\u00a7r\\n\\n\\u00a77\\u00a7oThe server you have tried to connect to is unreachable\\u00a7r\\n\\n\\n\\n\\u00a78Gamma Minecraft Proxy\\u00a7r\\n\\n\\u00a78\\u00a7m----------------------------------------",
+          "motd": "§4Can't connect to server",
+          "version": "Gamma Proxy"
+      }
   }
 }

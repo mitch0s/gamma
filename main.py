@@ -1,3 +1,3 @@
 import gamma
 
-gamma.Listen('0.0.0.0', 25565)
+gamma.Listen('localhost', 25565)

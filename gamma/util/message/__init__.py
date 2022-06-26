@@ -1,1 +1,5 @@
-from .unknown_hostname_motd import unknown_hostname_motd
+from .invalid_hostname_motd import invalid_hostname_motd
+from .server_offline_motd import server_offline_motd
+
+from .invalid_hostname_disconnect import invalid_hostname_disconnect
+from .server_offline_disconnect import server_offline_disconnect

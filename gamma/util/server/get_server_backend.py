@@ -10,23 +10,23 @@ def get_server_backend(hostname):
 
     configs = os.listdir('./config')
 
-    for config in configs:
-        config_file = open(f'./config/{config}')
-        config = json.loads(config_file.read())
-        config_file.close()
-
-        if 'hostname' in config:
-            if config['hostname'] == hostname:
-                host = config['host']
-                port = config['port']
-                if 'proxy_protocol' in config:
-                    proxy_protocol = config['proxy_protocol']
-                else:
-                    proxy_protocol = False
-
-                return host, port, proxy_protocol
-
+    if hostname not in configs:
         return None, None, None
+
+
+    config_file = open(f'./config/{hostname}')
+    config = json.loads(config_file.read())
+    config_file.close()
+
+    host = config['host']
+    port = config['port']
+    if 'proxy_protocol' in config:
+        proxy_protocol = config['proxy_protocol']
+    else:
+        proxy_protocol = False
+
+    return host, port, proxy_protocol
+
 
 
 
