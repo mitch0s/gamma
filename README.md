@@ -19,8 +19,10 @@ Join our [Discord Server!](https://discord.gg/NPyG3gAVtC)!
 - Highly Customisable
   - In the `Connection` class, there are functions that get called when events happen. Here are a list of the current events that are triggered
     - `on_player_ping`
-    - `on_player_join`
-    - `on_player_leave`
+    - `on_invalid_hostname_ping`
+    - `on_player_connect`
+    - `on_player_disconnect`
+    - `on_server_offline`
 
 - Additionally to all of this, we also have a bandwidth counter, `self.conn_bandwidth` which counts the total amount of bytes sent and received from the `upstream` (server) or the `downstream` (player) connection. 
 
