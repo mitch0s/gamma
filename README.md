@@ -34,6 +34,15 @@ I would have to say that the biggest inspiration for this project would have to 
 ### Notes
 - Proxy Protocol
   - Please be aware that when `proxy-protocol` is enabled, the server that the players will be proxied to has to be able to understand and read the proxy protocol header. Without this, the server can't understand the packet and drops it. If you're using `Waterfall`, you can turn set `proxy-protocol: true` in config.yml. Other server types normally have plugins to parse this kind of data.
+  
+  
+### Getting Started
+1. Clone the repo in whatever environment you wish
+2. Install the following requirements:
+  a. `requests`
+  b. `json`
+3. In the same directory as the `main.py` file, run `python3 main.py` and watch the magic happen!
+4. Give yourself a pat on the back :) 
 
 
 ### The Connection Object
