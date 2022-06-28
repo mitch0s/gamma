@@ -38,9 +38,7 @@ I would have to say that the biggest inspiration for this project would have to 
   
 ### Getting Started
 1. Clone the repo in whatever environment you wish
-2. Install the following requirements:
-  a. `requests`
-  b. `json`
+2. Install the following requirements: `requests`, `json`
 3. In the same directory as the `main.py` file, run `python3 main.py` and watch the magic happen!
 4. Give yourself a pat on the back :) 
 
