@@ -53,6 +53,7 @@ I would have to say that the biggest inspiration for this project would have to 
 |       self.conn_alive        |    Boolean    | Determines whether the connection is active or disconnected, `True = Connected`, `False = Disconnected` |
 |  self.upstream_packet_count  |    Integer    |                    The total number of packets transferred, from `Server` to `Gamma`                    |
 | self.downstream_packet_count |    Integer    |                    The total number of packets transferred from `Player` to `Gamma`                     |
-|     self.conn_bandwidth      |    Integer    |         The total amount of bytes proxied from both the `upstream` and `downstream` connections         |
+|     self.downstream_bandwidth      |    Integer    |         The total amount of bytes proxied from the `downstream` connection         |
+|     self.upstream_bandwidth      |    Integer    |         The total amount of bytes proxied from the `upstream` connection         |
 |      self.conn_hostname      |    String     |                  The hostname that the player has connected to from their server list                   |
 |     self.player_username     |    String     |              The username of the proxied player, can be None if a username isn't detected               |
