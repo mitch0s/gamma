@@ -1,0 +1,26 @@
+{
+    "SERVER_OFFLINE": {
+        "motd": {
+            "text": "&d&lServer unreachable.",
+            "protocol": -1,
+            "version": "Gamma Network",
+            "icon": null
+        },
+
+        "disconnect": {
+            "text": "&7&m------------------------------------------------------------------&r\n\n\n&d&lServer Offline\n\n\n\n&r&8This server is offline, and cannot be reached by the &5&lGamma Network&r\n\n\n&7&m------------------------------------------------------------------&r"
+        }
+    },
+    "INVALID_HOSTNAME": {
+        "motd": {
+            "text": "&d&lInvalid hostname.",
+            "protocol": -1,
+            "version": "Gamma Network",
+            "icon": "./gamma/assets/64x64_logo.png"
+        },
+
+        "disconnect": {
+            "text": "&7&m------------------------------------------------------------------&r\n\n\n&d&lInvalid Hostname\n\n\n\n&r&8This hostname points to, but is not configured on the &5&lGamma Network&r\n\n\n&7&m------------------------------------------------------------------&r"
+        }
+    }
+}

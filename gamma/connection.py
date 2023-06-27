@@ -1,227 +1,142 @@
-"""
-./gamma/connection.py
-"""
+import socket
 import sys
 import threading
-import traceback
-from .util import *
-import socket
 import time
+import gamma
+
 
 class Connection:
-    def __init__(self, **kwargs):
-        self.debug = False
-        self.debug_settings = {
-            'print_upstream': True,
-            'print_downstream': True,
-            'print_exceptions': True
-        }
+    """
+     This class defines how the proxy handles proxied data.
+    """
+    conn_alive = True
+    conn_type = None
+    found_username = False
+    found_hostname = False
 
-        # PROXY <---> SERVER connection
-        self.upstream_conn = None # socket object for the CLIENT <---> PROXY connection
-        self.downstream_conn = kwargs['downstream_conn'] # socket object for the CLIENT <---> PROXY connection
+    # socket.socket objects
+    upstream_conn:socket.socket = None
+    downstream_conn:socket.socket = None
+
+    # IPv4 addresses
+    downstream_addr:tuple = ()  # IP:PORT of player
+    upstream_addr:tuple = ()  # IP:PORT of server
+
+    downstream_connect_hostname:str = None  # Hostname used to connect to server
+
+    # Miscellaneous player info
+    player_username:str = None
+    player_version:str = None
+
+    downstream_bandwidth:int = 0
+    upstream_bandwidth:int = 0
+
+    downstream_timeout:int = 3
+    upstream_timeout:int = 3
+
+    downstream_epoch:float = 0
+    upstream_epoch:float = 0
 
 
-        # Global status to determine whether
-        # the connection is active or not
-        self.conn_alive = True
+    def __init__(self, downstream_conn, downstream_addr:tuple) -> None:
+        self.downstream_conn = downstream_conn
+        self.downstream_addr = downstream_addr
+        threading.Thread(target=self.setup_streams).start()
 
-        # DATA RECORDED IN CONNECTION
-        # Username of connected player
-        self.player_username = None
+    def setup_streams(self) -> None:
+        """
+         Connect to upstream, once connected, start relaying packets.
+        """
+        # Extract information from initial downstream packets.
+        self.downstream_packet_backlog = []
+        while True:
+            data = self.downstream_conn.recv(2048)
+            gamma.event.call.downstream_packet(data=data, PlayerConnection=self)
+            if not self.downstream_connect_hostname : self.downstream_connect_hostname = gamma.packet.scan.hostname(data=data)
+            if not self.conn_type : self.conn_type = gamma.packet.scan.connection_type(data=data)
+            if not self.player_username : self.player_username = gamma.packet.scan.username(data=data)
+            self.downstream_packet_backlog.append(data)
 
-        # Hostname requested by player
-        self.conn_hostname = None
+            if self.conn_type == 'PING' and self.downstream_connect_hostname is not None:
+                break
+            if self.conn_type == 'PLAY' and self.downstream_connect_hostname is not None and self.player_username is not None:
+                break
 
-        # Total bandwidth used by connection
-        self.conn_bandwidth = 0
 
-        # Total upstream/downstream packets
-        self.downstream_packet_count = 0
-        self.upstream_packet_count = 0
+        # Attempt a connection to upstream server
+        try:
+            self.netconfig = gamma.util.fetch.hostname_config(hostname=self.downstream_connect_hostname)
+            if not self.netconfig:
+                if self.conn_type == 'PING' : self.downstream_conn.send(gamma.response.invalid_hostname_motd())
+                if self.conn_type == 'PLAY' : self.downstream_conn.send(gamma.response.invalid_hostname_disconnect())
+                sys.exit()
 
-        # Address, Port attributed to each connection
-        self.downstream_address = kwargs['downstream_addr']
-        self.upstream_address = (None, None, None)
+            self.upstream_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.upstream_conn.connect((self.netconfig['backend_ip'], self.netconfig['backend_port']))
 
-        # MISC CHECKS
-        self.found_player_username = False
+        # Catch offline exception, return offline MOTD response
+        except ConnectionRefusedError:
+            match self.conn_type:
+                case 'PING' : self.downstream_conn.send(gamma.response.server_offline_motd())
+                case 'PLAY': self.downstream_conn.send(gamma.response.server_offline_disconnect())
 
-        ##########################################################
+        self.upstream_epoch = time.time()
+        self.downstream_epoch = time.time()
 
-        # Receives initial data from downstream connection
-        data = self.downstream_conn.recv(8192)
+        threading.Thread(target=self.handle_upstream_packet).start()
+        threading.Thread(target=self.handle_downstream_packet).start()
+        sys.exit()
 
-        self.conn_type = packet.get_conn_type(data) # Gets the connection type: PING, PLAY or UNKNOWN
 
-        # Finds hostname from within the first packet
-        self.conn_hostname = packet.get_conn_hostname(data)
+    def handle_downstream_packet(self) -> None:
+        """
+         Handle all data received from the downstream connection (Player)
+        """
+        gamma.event.call.downstream_connect(PlayerConnection=self)
+        while self.conn_alive:
+            try:
+                data = self.downstream_conn.recv(2048)
+                if data:
+                    self.downstream_bandwidth += len(data)
+                    data = gamma.event.call.downstream_packet(data=data, PlayerConnection=self)
+                    if self.upstream_conn : self.upstream_conn.send(data)
 
-        # Gets backend (ip, port, proxy_protocol) for hostname
-        self.upstream_address = server.get_server_backend(self.conn_hostname)
+            except (ConnectionResetError, BrokenPipeError, OSError):
+                self.conn_alive = False
 
-        # Appends the v1 proxy protocol schema if enabled
-        if self.upstream_address[2] == True:
-            data = b'PROXY TCP4 ' + self.downstream_address[0].encode() + b' 255.255.255.255 ' + str(self.downstream_address[1]).encode() + b' 25565\r\n' + data
-        if self.debug and self.debug_settings['print_upstream']:
-            print(data)
-
-        # If the IP for hostname == None (Not found), return
-        # invalid hostname motd to the downstream connection
-        if self.upstream_address[0] is None and self.conn_type == 'PING':
-            self.downstream_conn.send(message.invalid_hostname_motd())
-            self.conn_alive = False
-            self.on_invalid_hostname_ping()
-            sys.exit()
-
-        # Sends disconnect message if connection is `PLAY` and
-        # no server config is found
-        if self.upstream_address[0] is None and self.conn_type == 'PLAY':
-            self.downstream_conn.send(message.invalid_hostname_disconnect())
-            self.conn_alive = False
-            sys.exit()
-
-        threading.Thread(target=self.upstream).start()  # Starts a `PROXY <---> SERVER` thread
-
-        threading.Thread(target=self.downstream, kwargs={'data': data}).start()  # Starts a `CLIENT <---> PROXY` thread
 
         sys.exit()
 
 
 
-    def upstream(self, **kwargs):
-        try:
-            self.upstream_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.upstream_conn.settimeout(2)
+    def handle_upstream_packet(self) -> None:
+        """
+         Handle all data received from the upstream connection (Server)
+        """
+        # Send packet backlog to upstream connection
+        for packet in self.downstream_packet_backlog:
+            if self.netconfig['proxy_protocol']:
+                if self.downstream_packet_backlog.index(packet) == 0:
+                    packet = b'PROXY TCP4 ' + self.downstream_addr[0].encode() + b' 255.255.255.255 ' + str(self.downstream_addr[1]).encode() + b' 25565\r\n' + packet
+            self.upstream_conn.send(packet)
 
-            try:
-                self.upstream_conn.connect((self.upstream_address[0], self.upstream_address[1]))
-            except TimeoutError:
-                if self.conn_type == 'PING':
-                    self.downstream_conn.send(message.server_offline_motd())
-                if self.conn_type == 'PLAY':
-                    self.downstream_conn.send(message.server_offline_disconnect())
+        gamma.event.call.upstream_connect(PlayerConnection=self)
+        while self.conn_alive:
+            data = self.upstream_conn.recv(2048)
+            if data:
+                data = gamma.event.call.upstream_packet(data=data, PlayerConnection=self)
 
-                self.conn_alive = False
-                self.on_server_offline()
+                try:
+                    self.upstream_bandwidth += len(data)
+                    if self.downstream_conn: self.downstream_conn.send(data)
 
-            self.upstream_conn_packets = 0
 
-            while self.conn_alive:
-                data = self.upstream_conn.recv(8192)
-
-                if data:
-                    if self.debug and self.debug_settings['print_upstream']:
-                        print('[<]', data)
-
-                    self.last_upstream_packet = time.time()
-
-                    self.upstream_conn_packets += 1 # Adds 1 to upstream packet counter
-                    self.conn_bandwidth += len(data) # Adds packet length to bandwidth counter
-
-                    self.downstream_conn.send(data)
-
-                # Breaks the connection if the last PING packet was more than 2 seconds ago
-                if self.conn_type == 'PING' and time.time() - self.last_upstream_packet > 2:
-                    self.on_ping()
+                except (ConnectionResetError, BrokenPipeError, OSError):
                     self.conn_alive = False
 
-            self.upstream_conn.close()  # Close the connection if self.conn_alive == False
-            sys.exit()
+        gamma.event.call.upstream_disconnect(PlayerConnection=self)
+        sys.exit()
 
-        except Exception as error:
-            self.conn_alive = False
-            self.on_player_disconnect()
-
-            if self.debug:
-                traceback.print_exc()
-
-            sys.exit()
-
-
-
-    def downstream(self, **kwargs):
-        """
-        PLAYER <--> PROXY
-        """
-        time.sleep(0.5)
-
-        try:
-
-            if 'data' in kwargs:
-                self.upstream_conn.send(kwargs['data'])
-
-            while self.conn_alive:
-                if self.conn_type == 'PING' and self.upstream_conn_packets >= 5:
-                    self.on_ping()
-                    self.conn_alive = False
-
-                data = self.downstream_conn.recv(8192)
-
-                if data:
-                    if self.debug and self.debug_settings['print_downstream']:
-                        print(f'[>]', data)
-
-                    if self.downstream_packet_count == 0 and self.conn_type == 'PLAY':
-                        self.player_username = packet.get_player_username(data)
-                        self.on_player_connect()
-
-                    self.downstream_packet_count += 1
-
-                    self.conn_bandwidth += len(data) # Adds packet length to bandwidth counter
-
-                    self.upstream_conn.send(data) # Relays the data received to the upstream conn (server)
-
-
-            self.downstream_conn.close() # Close the connection if self.conn_alive == False
-            sys.exit()
-
-        except Exception as error:
-            self.conn_alive = False
-
-            if self.debug:
-                traceback.print_exc()
-
-            sys.exit()
-
-
-    def on_connection_request(self):
-        """
-        Runs code when a request is made to the proxy
-        """
-        raise NotImplementedError('This feature will be added later')
-
-    def on_ping(self):
-        """
-        Runs code when a ping request is made to the proxy
-        """
-        print(f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]}) PINGED {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
-
-    def on_invalid_hostname_ping(self):
-        """
-        Runs code when a ping requests an invalid hostname
-        """
-        print(
-            f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]}) PINGED {self.conn_hostname} [INVALID HOSTNAME]')
-
-    def on_player_connect(self):
-        """
-        Runs code when a new connection to a server is made
-        """
-        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]})  JOINED  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
-
-
-    def on_player_disconnect(self):
-        """
-        Runs code upon connection loss
-        """
-        print(f'[>] {self.player_username} ({self.downstream_address[0]}:{self.downstream_address[1]})  LEFT  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]})')
-        print(f'[?] Connection used {self.conn_bandwidth/1000000}MB of bandwidth!')
-
-    def on_server_offline(self):
-        """
-        Runs code after a connection is closed due to
-        the server being unresponsive during connection
-        """
-        print( f'[>] ({self.downstream_address[0]}:{self.downstream_address[1]})  CONNECTION FAILED  {self.conn_hostname} ({self.upstream_address[0]}:{self.upstream_address[1]}) [SERVER OFFLINE]')
-
+    def exit(self):
+        if self.upstream_conn : self.upstream_conn.close()
+        if self.downstream_conn : self.downstream_conn.close()
