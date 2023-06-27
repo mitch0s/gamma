@@ -3,5 +3,5 @@
     "backend_port": 25565,
     "cache-expiry": 0.0,
     "proxy_protocol": false,
-    "cache_expiry": 1687868630.777503
+    "cache_expiry": 1687871756.5600262
 }

@@ -124,6 +124,8 @@ class Connection:
                     self.upstream_conn.send(data)
             except (ConnectionResetError, BrokenPipeError, OSError):
                 self.conn_alive = False
+
+        gamma.event.call.downstream_disconnect(PlayerConnection=self)
         sys.exit()
 
 
@@ -134,11 +136,15 @@ class Connection:
         """
         # Send packet backlog to upstream connection
         for packet in self.downstream_packet_backlog:
-            # Add proxy protocol v1 if enabled in config.
-            if self.netconfig['proxy_protocol']:
-                if self.downstream_packet_backlog.index(packet) == 0:
-                    packet = b'PROXY TCP4 ' + self.downstream_addr[0].encode() + b' 255.255.255.255 ' + str(self.downstream_addr[1]).encode() + b' 25565\r\n' + packet
-            self.upstream_conn.send(packet)
+            try:
+                # Add proxy protocol v1 if enabled in config.
+                if self.netconfig['proxy_protocol']:
+                    if self.downstream_packet_backlog.index(packet) == 0:
+                        packet = b'PROXY TCP4 ' + self.downstream_addr[0].encode() + b' 255.255.255.255 ' + str(self.downstream_addr[1]).encode() + b' 25565\r\n' + packet
+                self.upstream_conn.send(packet)
+            except:
+                self.conn_alive = False
+
 
         gamma.event.call.upstream_connect(PlayerConnection=self)
         while self.conn_alive:

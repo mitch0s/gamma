@@ -12,11 +12,15 @@ g.bind(host='0.0.0.0', port=25564)  # Bind the socket server.
 
 @gamma.event.hook.downstream_connect
 def downstream_connect(Connection):
-    pass
+    match Connection.conn_type:
+        case 'PING' : print(f'[PING] {Connection.downstream_addr[0]} --> {Connection.downstream_connect_hostname}')
+        case 'PLAY' : print(f'[JOIN] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname}')
 
 @gamma.event.hook.downstream_disconnect
 def downstream_disconnect(Connection):
-    pass
+    match Connection.conn_type:
+        case 'PLAY':
+            print(f'[LEAVE] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname}')
 
 @gamma.event.hook.upstream_connect
 def upstream_connect(Connection):
