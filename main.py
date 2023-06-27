@@ -20,7 +20,7 @@ def downstream_connect(Connection):
 def downstream_disconnect(Connection):
     match Connection.conn_type:
         case 'PLAY':
-            print(f'[LEAVE] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname}')
+            print(f'[LEAVE] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname} [{Connection.upstream_packet_count + Connection.downstream_packet_count} packets] [{round((Connection.downstream_bandwidth + Connection.upstream_bandwidth) / 1_000_000, 1)}Mbit]')
 
 @gamma.event.hook.upstream_connect
 def upstream_connect(Connection):
