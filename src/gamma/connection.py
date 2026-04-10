@@ -2,7 +2,7 @@ import socket
 import sys
 import threading
 import time
-import gamma
+import src.gamma as gamma
 
 
 class Connection:

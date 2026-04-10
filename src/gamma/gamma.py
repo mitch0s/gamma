@@ -1,6 +1,6 @@
 import socket
 import time
-import gamma
+import src.gamma as gamma
 
 
 class Gamma:

@@ -1,7 +1,7 @@
 import threading
 import time
 
-import gamma
+import src.gamma as gamma
 import json
 
 g = gamma.Gamma()

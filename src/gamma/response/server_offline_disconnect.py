@@ -1,7 +1,7 @@
-import gamma
+import src.gamma as gamma
 
-def invalid_hostname_disconnect():
-    message = gamma.variable.invalid_hostname_disconnect_text
+def server_offline_disconnect():
+    message = gamma.variable.offline_disconnect_text
     message = gamma.util.format.colour_codes(data=message).encode()
     message = b'{"extra":[{"text":"' + message + b'"}],"text":""}'
     packet_data_length_varint = gamma.util.varint(len(message))
