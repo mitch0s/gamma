@@ -1,5 +1,5 @@
 import json
-import src.gamma as gamma
+import gamma as gamma
 
 def config(dir='./config.json') -> None:
     with open(dir) as config_file:

@@ -1,4 +1,4 @@
-import src.gamma as gamma
+import gamma as gamma
 
 
 def downstream_connect(func):

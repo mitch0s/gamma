@@ -4,5 +4,5 @@ from .load import *
 from .packet import *
 from .response import *
 from .util import *
-from .connection import Connection
+from ._connection import Connection
 from .variable import *

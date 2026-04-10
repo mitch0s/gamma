@@ -1,56 +1,22 @@
-import threading
-import time
-
-import src.gamma as gamma
-import json
-
-g = gamma.Gamma()
-g.debug = True
-
-gamma.load.config(dir='./config.json')
-g.bind(host='0.0.0.0', port=25564)  # Bind the socket server.
-
-@gamma.event.hook.downstream_connect
-def downstream_connect(Connection):
-    match Connection.conn_type:
-        case 'PING' : print(f'[PING] {Connection.downstream_addr[0]} --> {Connection.downstream_connect_hostname}')
-        case 'PLAY' : print(f'[JOIN] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname}')
-
-@gamma.event.hook.downstream_disconnect
-def downstream_disconnect(Connection):
-    match Connection.conn_type:
-        case 'PLAY':
-            print(f'[LEAVE] {Connection.downstream_addr[0]} ({Connection.player_username}) --> {Connection.downstream_connect_hostname} [{Connection.upstream_packet_count + Connection.downstream_packet_count} packets] [{round((Connection.downstream_bandwidth + Connection.upstream_bandwidth) / 1_000_000, 1)}Mbit]')
-
-@gamma.event.hook.upstream_connect
-def upstream_connect(Connection):
-    pass
-
-@gamma.event.hook.upstream_disconnect
-def upstream_disconnect(Connection):
-    pass
-
-@gamma.event.hook.downstream_packet
-def downstream_packet(data, Connection):
-    return data
-
-@gamma.event.hook.upstream_packet
-def upstream_packet(data, Connection):
-    return data
+import asyncio
+from gamma.net.player_connection import PlayerConnection
+from gamma.net.server_connection import ServerConnection
+from gamma.net.connection_relay import ConnectionRelay
+from gamma.response.invalid_hostname_motd import invalid_hostname_motd
 
 
+async def handle_player(reader, writer):
+    player_conn = PlayerConnection(reader, writer)
+    server_conn = ServerConnection(host='localhost', port=25560)
+    relay = ConnectionRelay(downstream=player_conn, upstream=server_conn)
+    await relay.start()
 
 
-def config_watcher():
-    config = {}
-    while True:
-        with open('config.json', 'r+') as config_file:
-            temp_config = json.loads(config_file.read())
-            if config != temp_config:
-                gamma.load.config(dir='./config.json')
-                config = temp_config
-                print('Config reloaded!')
-        time.sleep(1)
+async def main():
+    server = await asyncio.start_server(handle_player, '0.0.0.0', 25565)
+    async with server:
+        await server.serve_forever()
 
-threading.Thread(target=config_watcher).start()
-g.listen()  # Begin handling player connections.
+
+if __name__ == '__main__':
+    asyncio.run(main())

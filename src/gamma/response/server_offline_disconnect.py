@@ -1,4 +1,4 @@
-import src.gamma as gamma
+import gamma as gamma
 
 def server_offline_disconnect():
     message = gamma.variable.offline_disconnect_text

@@ -1,4 +1,4 @@
-import src.gamma as gamma
+import gamma as gamma
 
 def invalid_hostname_disconnect():
     message = gamma.variable.invalid_hostname_disconnect_text

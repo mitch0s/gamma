@@ -1,5 +1,5 @@
 import base64
-import src.gamma as gamma
+import gamma as gamma
 
 def server_offline_motd():
     # Read and Encode Data from settings

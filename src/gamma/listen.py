@@ -6,7 +6,7 @@ new thread targeted at `connection.Connection` which then
 starts the PLAYER <--> PROXY <--> SERVER connections
 """
 import socket
-from .connection import Connection
+from ._connection import Connection
 import threading
 
 
