@@ -1,6 +1,6 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
-from gamma.net.connection import Connection
+from gamma.netty.connection import Connection
 
 
 class PlayerConnection(Connection):

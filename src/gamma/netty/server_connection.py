@@ -1,5 +1,5 @@
 import asyncio
-from gamma.net.connection import Connection
+from gamma.netty.connection import Connection
 
 
 class ServerConnection(Connection):
