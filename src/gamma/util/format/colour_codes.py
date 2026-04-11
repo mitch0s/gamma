@@ -1,4 +1,4 @@
-def colour_codes(data: str) -> str:
+def format_colour_codes(data: str) -> str:
     """
     :param data: string containing data/motd with & colour codes
     :return: string formatted for Minecaft protocol

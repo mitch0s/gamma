@@ -1,0 +1,14 @@
+{
+    "invalid_hostname": {
+        "icon": "./gamma/images/gamma_logo.png",
+        "motd": "Invalid hostname. Please check the Gamma documentation.",
+        "version": "Gamma",
+        "disconnect": "Invalid hostname. Please check the Gamma documentation."
+    },
+    "server_offline": {
+        "icon": "./gamma/images/gamma_logo.png",
+        "motd": "Server offline. Please check again later.",
+        "version": "Gamma",
+        "disconnect": "Server offline. Please check again later."
+    }
+}

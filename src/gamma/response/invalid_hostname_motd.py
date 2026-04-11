@@ -1,32 +1,34 @@
+import json
 import base64
-import gamma as gamma
+from gamma.util.format.colour_codes import format_colour_codes
+from gamma.util.bitwise.varint import varint
 
 def invalid_hostname_motd():
-    version = gamma.util.format.colour_codes(
-        gamma.variable.invalid_hostname_motd_version
-    ).encode()
 
-    motd = gamma.util.format.colour_codes(
-        gamma.variable.invalid_hostname_motd_text
-    ).encode()
+    with open('./config.json', 'r+') as file:
+        config = json.loads(file.read())
+        file.close()
+
+    cfg = config.get('invalid_hostname', {})
+
+    version = format_colour_codes(cfg.get('version', 'Gamma')).encode()
+    motd = format_colour_codes(cfg.get('motd', 'Invalid hostname. Please check our documentation.')).encode()
+    icon = cfg.get('icon', None)
 
     packet = b'{"version":{"name":"' + version + b'","protocol":-1},' \
              b'"players":{"max":0,"online":0,"sample":[]},' \
              b'"description":{"text":"' + motd + b'"}}'
 
-    if gamma.variable.invalid_hostname_motd_icon:
-        with open(gamma.variable.invalid_hostname_motd_icon, 'rb') as image:
+    if icon:
+        with open(icon, 'rb') as image:
             image = base64.b64encode(image.read())
-        packet = b'{"version":{"name":"' + version + b'","protocol":-1},' \
-                 b'"players":{"max":69,"online":69,"sample":[]},' \
-                 b'"description":{"text":"' + motd + b'"},' \
-                 b'"favicon":"data:image/png;base64,' + image + b'"}'
+            packet = b'{"version":{"name":"' + version + b'","protocol":-1},' \
+                    b'"players":{"max":0,"online":0,"sample":[]},' \
+                    b'"description":{"text":"' + motd + b'"},' \
+                    b'"favicon":"data:image/png;base64,' + image + b'"}'
 
-    string_len = gamma.varint(len(packet))
-
+    string_len = varint(len(packet))
     packet_id = b'\x00'
     data = packet_id + string_len + packet
-
-    packet_len = gamma.varint(len(data))
-
+    packet_len = varint(len(data))
     return packet_len + data

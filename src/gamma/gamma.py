@@ -5,17 +5,16 @@ from gamma.netty.server_connection import ServerConnection
 from gamma.netty.connection_relay import ConnectionRelay
 from gamma.gui.terminal import GammaTerminal
 from gamma.mixin.logger import CallbackHandler
-# logging.basicConfig = lambda *a, **k: None  # patch first
+import gamma.common
+
 root = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[CallbackHandler()]  # add logging.StreamHandler() for console output
-)
+logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler(), CallbackHandler()])  # add logging.StreamHandler() for console output
 
 class Gamma:
-    def __init__(self, host:str='127.0.0.1', port:int=25565):
+    def __init__(self, host:str='0.0.0.0', port:int=25565):
         self.host = host
         self.port = port
+        self._conn_id_counter = 0
 
     def start(self):
         asyncio.run(self.start_async())
@@ -34,18 +33,16 @@ class Gamma:
         async with server:
             await server.serve_forever()
         
-
     async def handle_player(self, reader, writer):
         async def _handle(reader, writer):
             try:
                 player_conn = PlayerConnection(reader, writer)
                 server_conn = ServerConnection(host='localhost', port=25560)
-                relay = ConnectionRelay(downstream=player_conn, upstream=server_conn)
+                relay = ConnectionRelay(id=self._conn_id_counter, downstream=player_conn, upstream=server_conn)
+                self._conn_id_counter += 1
+                gamma.common.connections.append(relay)
                 await relay.start()
             except (ConnectionResetError, BrokenPipeError, EOFError, asyncio.CancelledError):
                 pass
-            finally:
-                if not writer.is_closing():
-                    writer.close()
         asyncio.create_task(_handle(reader, writer))
 

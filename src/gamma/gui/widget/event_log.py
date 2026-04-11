@@ -2,7 +2,9 @@ from textual.widget import Widget
 from textual.widgets import DataTable
 from gamma.mixin.logger import CallbackHandler
 from logging import LogRecord
+import logging
 
+logger = logging.getLogger()
 
 class EventLog(Widget):
     def __init__(self, *children, name=None, id=None, classes=None, disabled=False, markup=True):
