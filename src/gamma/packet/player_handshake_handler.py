@@ -34,16 +34,16 @@ def _iter_mc_packets(data: bytes):
     """
     offset = 0
     while offset < len(data):
-        try:
-            length, offset = _parse_varint(data, offset)
-            if offset + length > len(data):
-                break
-            payload = data[offset:offset + length]
-            mc_packet_id, _ = _parse_varint(payload, 0)
-            offset += length
-            yield mc_packet_id, payload
-        except (IndexError, UnicodeDecodeError):
+        # try:
+        length, offset = _parse_varint(data, offset)
+        if offset + length > len(data):
             break
+        payload = data[offset:offset + length]
+        mc_packet_id, _ = _parse_varint(payload, 0)
+        offset += length
+        yield mc_packet_id, payload
+        # except (IndexError, UnicodeDecodeError):
+        #     break
 
 
 class PlayerHandshakePacketHandler(PacketHandler):
@@ -61,25 +61,21 @@ class PlayerHandshakePacketHandler(PacketHandler):
     def handle(self, packet: Packet) -> Packet:
         if self._done:
             return packet
-        try:
-            for mc_id, payload in _iter_mc_packets(packet.data):
-                if self._done:
-                    break
 
-                if mc_id == 0x00 and self.connection.type is None:
-                    self._parse_handshake(payload)
+        for mc_id, payload in _iter_mc_packets(packet.data):
+            if self._done:
+                break
 
-                elif mc_id == 0x00 and self.connection.type == PlayerConnectionType.PLAY:
-                    self._parse_login(payload)
-                    self._done = True
+            if mc_id == 0x00 and self.connection.type is None:
+                self._parse_handshake(payload)
 
-        except Exception as e:
-            logger.debug('HandshakePacketHandler error on packet id=%d: %s', packet.id, e)
+            elif mc_id == 0x00 and self.connection.type == PlayerConnectionType.PLAY:
+                self._parse_login(payload)
+                self._done = True
 
         return packet
 
     def _parse_handshake(self, data: bytes):
-        print(f'_parse_handshake called, data={data[:20].hex()}')
         offset = 0
         _packet_id, offset = _parse_varint(data, offset)
         _protocol, offset = _parse_varint(data, offset)
@@ -87,15 +83,11 @@ class PlayerHandshakePacketHandler(PacketHandler):
         _port = int.from_bytes(data[offset:offset + 2], 'big')
         offset += 2
         next_state, _ = _parse_varint(data, offset)
-
         self.connection.hostname = hostname
         self.connection.type = (
             PlayerConnectionType.PING if next_state == 1
             else PlayerConnectionType.PLAY
         )
-
-        logger.debug('Handshake: type=%s hostname=%s protocol=%d',
-                     self.connection.type, self.connection.hostname, _protocol)
 
     def _parse_login(self, data: bytes):
         # payload has no outer length prefix

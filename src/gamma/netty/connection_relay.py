@@ -14,82 +14,54 @@ logger = logging.getLogger()
 
 
 class ConnectionRelay:
-    def __init__(self, id: int, downstream: PlayerConnection, upstream: ServerConnection):
+    def __init__(self, id: int, downstream:PlayerConnection, upstream:ServerConnection):
         self.id = id
         self.created_ts = time.time()
         self.downstream = downstream
         self.upstream = upstream
         self.total_packets = 0
         self.total_bytes = 0
+        self._connection_open = False
 
     async def start(self):
         logger.info('Connection opened.')
+        PlayerHandshakePacketHandler(self.downstream)
         try:
-            PlayerHandshakePacketHandler(self.downstream)
-            async with asyncio.TaskGroup() as tg:
-                tg.create_task(self.downstream.start())
-                tg.create_task(self._wait_for_handshake_then_relay())
-        except* Exception as eg:
-            for e in eg.exceptions:
-                logger.debug('ConnectionRelay error: %s', e)
+            await self._wait_for_handshake_then_relay()
+        except* Exception as e:
+            pass
         finally:
             await self.downstream.close()
             await self.upstream.close()
             logger.info('Connection closed.')
+            self._connection_open = False
 
     async def _wait_for_handshake_then_relay(self):
-        while True:
-            if self.downstream.type and self.downstream.hostname:
-                break
-            await asyncio.sleep(0.01)
-
-        invalid_hostname = self.downstream.hostname == 'localhost'
-
-        if invalid_hostname:
-            if self.downstream.type == PlayerConnectionType.PING:
-                self.downstream.writer.write(invalid_hostname_motd())
-                await self.downstream.writer.drain()
-                ping = await self.downstream.read()
-                if ping:
-                    self.downstream.writer.write(ping.data)
-                    await self.downstream.writer.drain()
-            elif self.downstream.type == PlayerConnectionType.PLAY:
-                self.downstream.writer.write(invalid_hostname_disconnect())
-                await self.downstream.writer.drain()
-            return
-
-        # valid hostname — connect upstream and relay
-        await self.upstream.connect()
-        while True:
-            packet = self.downstream.read_nowait()
-            if packet is None:
-                break
-            self.upstream.writer.write(packet.data)
-        await self.upstream.writer.drain()
-
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.upstream.start())
+            # create downstream connection class
+            tg.create_task(self.downstream.start())
+
+            while True:
+                if self.downstream.type and self.downstream.hostname:
+                    break
+                await asyncio.sleep(0)
+
+            invalid_hostname = self.downstream.hostname == 'localhost'
+            if invalid_hostname:
+                if self.downstream.type == PlayerConnectionType.PING:
+                    self.downstream.writer.write(invalid_hostname_motd())
+                if self.downstream.type == PlayerConnectionType.PLAY:
+                    self.downstream.writer.write(invalid_hostname_disconnect())
+                await self.downstream.writer.drain()
+                await self.downstream.close()
             tg.create_task(self._forward(self.downstream, self.upstream))
             tg.create_task(self._forward(self.upstream, self.downstream))
+            tg.create_task(self.upstream.start())
+            self._connection_open = True
 
     async def _forward(self, src: Connection, dst: Connection):
         while True:
-            packet: Packet = await src.read()
-            if not packet:
-                break
+            packet:Packet = await src.read()
             await dst.write(packet)
             self.total_packets += 1
             self.total_bytes += len(packet.data)
-        await src.close()
-        await dst.close()
-
-    async def _forward(self, src: Connection, dst: Connection):
-        while True:
-            packet: Packet = await src.read()
-            if not packet:
-                break
-            await dst.write(packet)
-            self.total_packets += 1
-            self.total_bytes += len(packet.data)
-        await src.close()
-        await dst.close()
