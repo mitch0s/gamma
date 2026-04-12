@@ -3,6 +3,7 @@ from textual.widgets import DataTable
 from gamma.mixin.logger import CallbackHandler
 from logging import LogRecord
 import logging
+from datetime import datetime
 
 logger = logging.getLogger()
 
@@ -23,7 +24,7 @@ class EventLog(Widget):
         self.set_interval(0.2, self.draw_queued_logs)
 
     def handle_log(self, record:LogRecord=None):
-        row = [record.created, record.levelname, record.getMessage()]
+        row = [datetime.fromtimestamp(record.created), record.levelname, record.getMessage()]
         self._log_queue.append(row)
 
     def draw_queued_logs(self):

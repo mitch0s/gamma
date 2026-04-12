@@ -2,12 +2,13 @@ import logging
 import asyncio
 from asyncio import StreamReader, StreamWriter
 from gamma.packet import Packet, PacketHandler
-import traceback
 
 logger = logging.getLogger()
 
 class Connection:
-    def __init__(self, reader: StreamReader, writer: StreamWriter):
+    def __init__(self, reader:StreamReader, writer:StreamWriter):
+        self.host_addr = None
+        self.host_port = None
         self.reader = reader
         self.writer = writer
         self._read_queue: asyncio.Queue = asyncio.Queue()
@@ -21,6 +22,12 @@ class Connection:
             self._packet_handlers.append(handler)
 
     async def start(self):
+        try: 
+            peer_info = self.writer.get_extra_info('peername')
+            self.host_addr, self.host_port = peer_info[:2]
+        except Exception as error: 
+            logger.error(error)
+
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._read_loop())
             tg.create_task(self._write_loop())
@@ -41,7 +48,7 @@ class Connection:
     async def _read_loop(self):
         packet_id = 0
         while True:
-            data = await self.reader.read(256)
+            data = await self.reader.read(512)
             if not data:
                 raise EOFError('socket not available to read from')
             packet = self._handle_packet(Packet(id=packet_id, data=data))
@@ -60,7 +67,7 @@ class Connection:
             self.packet_bytes += len(packet.data)
             self.packet_count += 1
 
-    def _handle_packet(self, packet: Packet | None) -> Packet | None:
+    def _handle_packet(self, packet: Packet|None) -> Packet|None:
         for handler in self._packet_handlers:
             if packet is None:
                 break

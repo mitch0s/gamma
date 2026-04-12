@@ -8,8 +8,8 @@ from gamma.mixin.logger import CallbackHandler
 import gamma.common
 import traceback
 
-root = logging.getLogger()
-logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler(), CallbackHandler()])  # add logging.StreamHandler() for console output
+logger = logging.getLogger()
+logging.basicConfig(level=logging.INFO, handlers=[CallbackHandler()])  # add logging.StreamHandler() for console output
 
 class Gamma:
     def __init__(self, host:str='0.0.0.0', port:int=25565):
@@ -22,7 +22,7 @@ class Gamma:
 
     async def start_async(self):
         async with asyncio.TaskGroup() as tg:
-            # tg.create_task(self.terminal_task())
+            tg.create_task(self.terminal_task())
             tg.create_task(self.server_task())
     
     async def terminal_task(self):
@@ -36,12 +36,15 @@ class Gamma:
         
     async def handle_player(self, reader, writer):
         async def _handle(reader, writer):
-            player_conn = PlayerConnection(reader, writer)
-            server_conn = ServerConnection(host='localhost', port=25560)
-            # server_conn = ServerConnection(host='mc.playerservers.com', port=25565)
-            relay = ConnectionRelay(id=self._conn_id_counter, downstream=player_conn, upstream=server_conn)
-            self._conn_id_counter += 1
-            gamma.common.connections.append(relay)
-            asyncio.create_task(relay.start())
+            try:
+                player_conn = PlayerConnection(reader, writer)
+                server_conn = ServerConnection(host='localhost', port=25560)
+                # server_conn = ServerConnection(host='mc.playerservers.com', port=25565)
+                relay = ConnectionRelay(id=self._conn_id_counter, downstream=player_conn, upstream=server_conn)
+                self._conn_id_counter += 1
+                gamma.common.connections.append(relay)
+                asyncio.create_task(relay.start())
+            except* Exception as error:
+                logger.debug(str(error))
         asyncio.create_task(_handle(reader, writer))
 

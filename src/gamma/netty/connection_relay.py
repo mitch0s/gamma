@@ -21,19 +21,21 @@ class ConnectionRelay:
         self.upstream = upstream
         self.total_packets = 0
         self.total_bytes = 0
-        self._connection_open = False
+        self._connection_open = True
 
     async def start(self):
-        logger.info('Connection opened.')
+        logger.debug('Connection opened.')
         PlayerHandshakePacketHandler(self.downstream)
         try:
             await self._wait_for_handshake_then_relay()
         except* Exception as e:
-            pass
+            logger.debug(str(e))
         finally:
             await self.downstream.close()
             await self.upstream.close()
-            logger.info('Connection closed.')
+            logger.debug('Connection closed.')
+            if self.downstream.type == PlayerConnectionType.PLAY:
+                logger.info(f'{self.downstream.username} ({self.downstream.host_addr}:{self.downstream.host_port}) LEFT {self.downstream.hostname}')
             self._connection_open = False
 
     async def _wait_for_handshake_then_relay(self):
@@ -44,20 +46,28 @@ class ConnectionRelay:
             while True:
                 if self.downstream.type and self.downstream.hostname:
                     break
-                await asyncio.sleep(0)
+                await asyncio.sleep(0.01)
 
             invalid_hostname = self.downstream.hostname == 'localhost'
             if invalid_hostname:
                 if self.downstream.type == PlayerConnectionType.PING:
+                    logger.info(f'Player ({self.downstream.host_addr}:{self.downstream.host_port}) PINGED INVALID HOSTNAME: {self.downstream.hostname}')
                     self.downstream.writer.write(invalid_hostname_motd())
                 if self.downstream.type == PlayerConnectionType.PLAY:
+                    logger.info(f'Player ({self.downstream.host_addr}:{self.downstream.host_port}) JOINED INVALID HOSTNAME: {self.downstream.hostname}')
                     self.downstream.writer.write(invalid_hostname_disconnect())
                 await self.downstream.writer.drain()
                 await self.downstream.close()
+
+
+            if self.downstream.type == PlayerConnectionType.PING:
+                logger.info(f'Player ({self.downstream.host_addr}:{self.downstream.host_port}) PINGED {self.downstream.hostname}')
+            if self.downstream.type == PlayerConnectionType.PLAY:
+                logger.info(f'{self.downstream.username} ({self.downstream.host_addr}:{self.downstream.host_port}) JOINED {self.downstream.hostname}')
+            
             tg.create_task(self._forward(self.downstream, self.upstream))
             tg.create_task(self._forward(self.upstream, self.downstream))
             tg.create_task(self.upstream.start())
-            self._connection_open = True
 
     async def _forward(self, src: Connection, dst: Connection):
         while True:

@@ -26,7 +26,7 @@ def _parse_string(data: bytes, offset: int) -> tuple[str, int]:
     return value, offset + length
 
 
-def _iter_mc_packets(data: bytes):
+def _iter_mc_packets(data:bytes):
     """
     Iterate over raw Minecraft packets in a data chunk.
     Yields (mc_packet_id, payload) where payload does NOT include the outer length varint.
