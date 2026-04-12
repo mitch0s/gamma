@@ -3,7 +3,7 @@ from gamma.util.format.colour_codes import format_colour_codes
 from gamma.util.bitwise.varint import varint
 
 
-DEFAULT_MESSAGE = '&7&m------------------------------------------------------------------&r\n\n\n&d&lInvalid Hostname\n\n\n\n&r&8This hostname is not configured on the &5&lGamma Network&r\n\n\n&7&m------------------------------------------------------------------&r'
+DEFAULT_MESSAGE = '&7&m--------------------------------------------------------------&r\n\n\n&d&lInvalid Hostname\n\n\n\n&r&8This hostname is not configured on the &5&lGamma Network&r\n\n\n&7&m--------------------------------------------------------------&r'
 
 def invalid_hostname_disconnect():
     with open('./config.json', 'r+') as file:

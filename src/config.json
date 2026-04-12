@@ -3,12 +3,12 @@
         "icon": "./gamma/images/gamma_logo.png",
         "motd": "&d&lInvalid hostname.&r&d Please check the Gamma documentation.",
         "version": "Gamma",
-        "disconnect": "&7&m------------------------------------------------------------------&r\n\n\n&d&lInvalid Hostname\n\n\n\n&r&8This hostname is not configured on the &5&lGamma Network&r\n\n\n&7&m------------------------------------------------------------------&r"
+        "disconnect": "&7&m--------------------------------------------------------------&r\n\n\n&d&lInvalid Hostname\n\n\n\n&r&8This hostname is not configured on the &5&lGamma Network&r\n\n\n&7&m--------------------------------------------------------------&r"
     },
     "server_offline": {
         "icon": "./gamma/images/gamma_logo.png",
         "motd": "Server unreachable. Please check again later.",
         "version": "Gamma",
-        "disconnect": "&7&m------------------------------------------------------------------&r\n\n\n&d&lServer Offline\n\n\n\n&r&8This server is offline, and cannot be reached by the &5&lGamma Network&r\n\n\n&7&m------------------------------------------------------------------&r"
+        "disconnect": "&7&m--------------------------------------------------------------&r\n\n\n&d&lServer Offline\n\n\n\n&r&8This server is offline, and cannot be reached by the &5&lGamma Network&r\n\n\n&7&m--------------------------------------------------------------&r"
     }
 }
