@@ -22,11 +22,13 @@ class PlayerSessionTable(Widget):
             "Type",
             "Hostname",
             "Duration (s)",
+            "Bandwidth (MB/s)",
             "Bandwidth (MB)",
         )
 
         self._col_keys = []
         self.table = DataTable(cursor_type="row")
+        self.update_delay = 1  # seconds
 
 
     def compose(self):
@@ -34,7 +36,7 @@ class PlayerSessionTable(Widget):
 
     def on_mount(self):
         self._col_keys = self.table.add_columns(*self._columns)
-        self.set_interval(0.1, self.refresh_table)
+        self.set_interval(self.update_delay, self.refresh_table)
 
         # Ensure key events go to the table
         self.table.focus()
@@ -80,6 +82,11 @@ class PlayerSessionTable(Widget):
                     key=row_key,
                 )
 
+            if getattr(conn, '_last_bandwidth') is None:
+                setattr(conn, '_last_bandwidth', 0)
+            bandwidth_mbytes_sec = ((conn.total_bytes - getattr(conn, '_last_bandwidth')) / self.update_delay) / 1_000_000
+            setattr(conn, '_last_bandwidth', conn.total_bytes)
+
             # update active row
             bandwidth_mb = conn.total_bytes / 1_000_000
 
@@ -90,4 +97,5 @@ class PlayerSessionTable(Widget):
                 self.table.update_cell(row_key, self._col_keys[3], conn.downstream.type.name)
             self.table.update_cell(row_key, self._col_keys[4], conn.downstream.hostname, update_width=True)
             self.table.update_cell(row_key, self._col_keys[5], int(time.time() - conn.created_ts))
-            self.table.update_cell(row_key, self._col_keys[6], f"{bandwidth_mb:.3f}")
+            self.table.update_cell(row_key, self._col_keys[6], bandwidth_mbytes_sec)
+            self.table.update_cell(row_key, self._col_keys[7], f"{bandwidth_mb:.3f}")

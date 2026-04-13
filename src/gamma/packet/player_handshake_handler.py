@@ -1,13 +1,13 @@
 import logging
 import asyncio
-from gamma.packet import Packet, PacketHandler
+from gamma.packet import PacketHandler
 from gamma.netty.player_connection import PlayerConnection, PlayerConnectionType
 from gamma.response.invalid_hostname_motd import invalid_hostname_motd
 
 logger = logging.getLogger()
 
 
-def _parse_varint(data: bytes, offset: int) -> tuple[int, int]:
+def _parse_varint(data:bytes, offset: int) -> tuple[int, int]:
     result = 0
     shift = 0
     while True:
@@ -20,7 +20,7 @@ def _parse_varint(data: bytes, offset: int) -> tuple[int, int]:
     return result, offset
 
 
-def _parse_string(data: bytes, offset: int) -> tuple[str, int]:
+def _parse_string(data:bytes, offset: int) -> tuple[str, int]:
     length, offset = _parse_varint(data, offset)
     value = data[offset:offset + length].decode('utf-8', errors='ignore')
     return value, offset + length
@@ -58,24 +58,20 @@ class PlayerHandshakePacketHandler(PacketHandler):
         self.connection = connection
         self._done = False
 
-    def handle(self, packet: Packet) -> Packet:
+    def handle(self, packet:bytes) -> bytes:
         if self._done:
             return packet
-
-        for mc_id, payload in _iter_mc_packets(packet.data):
+        for mc_id, payload in _iter_mc_packets(packet):
             if self._done:
                 break
-
             if mc_id == 0x00 and self.connection.type is None:
                 self._parse_handshake(payload)
-
             elif mc_id == 0x00 and self.connection.type == PlayerConnectionType.PLAY:
                 self._parse_login(payload)
                 self._done = True
-
         return packet
 
-    def _parse_handshake(self, data: bytes):
+    def _parse_handshake(self, data:bytes):
         offset = 0
         _packet_id, offset = _parse_varint(data, offset)
         _protocol, offset = _parse_varint(data, offset)
@@ -89,7 +85,7 @@ class PlayerHandshakePacketHandler(PacketHandler):
             else PlayerConnectionType.PLAY
         )
 
-    def _parse_login(self, data: bytes):
+    def _parse_login(self, data:bytes):
         # payload has no outer length prefix
         offset = 0
         _packet_id, offset = _parse_varint(data, offset)
