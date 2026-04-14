@@ -43,8 +43,8 @@ class ConnectionRelay:
                     f'({self.downstream.host_addr}:{self.downstream.host_port}) '
                     f'LEFT {self.downstream.hostname}'
                 )
-
             self._connection_open = False
+            del self
 
     async def _handshake_then_relay(self):
         await self.downstream.start()
@@ -53,7 +53,7 @@ class ConnectionRelay:
 
         # read + buffer until handshake resolved
         while True:
-            data = await self.downstream.reader.read(65536)
+            data = await self.downstream.reader.read(8192)
             if not data:
                 raise EOFError()
 

@@ -57,7 +57,7 @@ class Gamma:
             # server_conn = ServerConnection(host='mc.playerservers.com', port=25565)
             relay = ConnectionRelay(id=self._conn_id_counter, downstream=player_conn, upstream=server_conn)
             self._conn_id_counter += 1
-            gamma.common.connections.append(relay)
+            # gamma.common.connections.append(relay)
             asyncio.create_task(relay.start())
             # except* Exception as error:
             #     logger.debug(str(error))

@@ -35,7 +35,7 @@ class Connection:
             self.writer.close()
 
     async def read(self) -> bytes|None:
-        data = await self.reader.read(65535)
+        data = await self.reader.read(8192)
         if not data:
             raise EOFError('socket not available to read from')
         self.packet_bytes += len(data)
