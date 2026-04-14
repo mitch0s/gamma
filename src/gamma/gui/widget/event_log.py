@@ -30,5 +30,4 @@ class EventLog(Widget):
     def draw_queued_logs(self):
         for row in self._log_queue:
             self.table.add_row(*row)
-        # self.table.scroll_end()
         self._log_queue = []

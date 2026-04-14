@@ -22,6 +22,7 @@ Gamma is a reverse proxy for Minecraft networks implemented in Python using asyn
 | 🚧 | Proxy&nbsp;Protocol      |  Support for sending client addresses to upstream server using the `PROXY TCP4` header has not been implemented in the async rewrite just yet. |
 | 🚧 | Config&nbsp;Manager      |  Backend configuration management has not been implemented in the async rewrite just yet. |
 | ❌ | Terminal&nbsp;Interface  |  Terminal interface using the [Textual](https://github.com/textualize/textual) package that displays per-player or global connection information. |
+| ❌ | Docker Support           |  Docker containerization config (dockerfile)  |
 | ❌ | Crosstalk                |  Peer discovery and communication mechanism allowing your distributed Gamma instances discover and communicate player + network information with each-other.  |
 
 ## Installation
