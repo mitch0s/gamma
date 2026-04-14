@@ -3,59 +3,55 @@ cd <p align="center" width="100%">
 </p>
 
 # Gamma
-### A Minecraft proxy implemented in Python
+### Asynchronous Reverse Proxy for Minecraft Networks
 
-*Note: this project is not actively maintained which may lead to issues and bugs.*
+*It's back! Gamma is now under active development, focusing mainly on an async reimplementation of the core proxy. You can see the latest developments on the [development branch](https://github.com/mitch0s/gamma/tree/development). You may also want to join the [Discord Server!](https://discord.gg/NPyG3gAVtC)!*
 
-Gamma is a reverse-TCP proxy for Minecraft networks implemented in Python using the `socket` package. Gamma supports multiple client connections to multiple servers. Players are proxied to the respective server depending on the hostname included in the first connection packet.
+Gamma is a reverse proxy for Minecraft networks implemented in Python using asyncio. Gamma supports relaying traffic between multiple client connections to multiple servers. Players are proxied to the respective server depending on the hostname included in the first connection packet.
 
-Join our [Discord Server!](https://discord.gg/NPyG3gAVtC)!
+&nbsp;
 
-### Features
-- Proxy Protocol
-  - Gamma supports sending the `proxy protocol v1` heading to the server to forward player IPs
-- Multiple Players
-  - Gamma supports multiple player connections simultaneously
-- Multiple Servers
-  - Gamma supports proxying players to different servers depending on the hostname that they include in their server list
-- Highly Customisable
-  - In the `Connection` class, there are functions that get called when events happen. Here are a list of the current events that are triggered
-    - `on_player_ping`
-    - `on_invalid_hostname_ping`
-    - `on_player_connect`
-    - `on_player_disconnect`
-    - `on_server_offline`
+## Features
+| Status | Feature | Description |
+| :----: | ------- | ----------- |
+| ✅ | Asynchronous&nbsp;I/O    |  Gamma is written around asynchronous network communication, which brings a multitude of benefits such as lower memory usage. |
+| ✅ | Multiple&nbsp;Players    |  Gamma supports multiple simultaneous player (client) connections. |
+| ✅ | Multiple&nbsp;Backends   |  Gamma supports multiple configured backends (Minecraft servers). |
+| ✅ | Packet&nbsp;Pipeline     |  Gamma allows users to easily implement PacketHandler subclasses and register them in the packet pipeline of any Connection object. |
+| ✅ | Packet&nbsp;Pipeline     |  Gamma allows users to easily implement PacketHandler subclasses and register them in the packet pipeline of any Connection object. |
+| 🚧 | Proxy&nbsp;Protocol      |  Support for sending client addresses to upstream server using the `PROXY TCP4` header has not been implemented in the async rewrite just yet. |
+| 🚧 | Config&nbsp;Manager      |  Backend configuration management has not been implemented in the async rewrite just yet. |
+| ❌ | Terminal&nbsp;Interface  |  Terminal interface using the [Textual](https://github.com/textualize/textual) package that displays per-player or global connection information. |
+| ❌ | Crosstalk                |  Peer discovery and communication mechanism allowing your distributed Gamma instances discover and communicate player + network information with each-other.  |
 
-- Additionally to all of this, we also have a bandwidth counter, `self.conn_bandwidth` which counts the total amount of bytes sent and received from the `upstream` (server) or the `downstream` (player) connection. 
+## Installation
+| Step | Description | Command |
+| :-: | --- | --- |
+| 1 | Clone repo | `git clone https://github.com/mitch0s/gamma/` |
+| 2 | Change directory to 'gamma/' | `cd gamma/` |
+| 3 | Create Python Virtual Environment (venv) | `python -m venv venv` |
+| 4 | Activate Virtual Environment | `./venv/Scripts/activate` (_Note: activation command different on MacOS/Linux_) |
+| 5 | Install Package Requirements | `pip install -r requirements.txt` |
+| 6 | Change directory to 'src/' | `cd src/` |
+| 7 | Start Gamma | `python main.py` |
+| 8 | Done | Gamma should now running in the same terminal. |
 
+## How Does Gamma Work?
+<img width="1502" height="484" alt="image" src="https://github.com/user-attachments/assets/28ed9db7-94ba-40b9-90b5-d6adc11a2f9e" />
 
+1. Minecraft client (client) sends DNS request to resolve _some_ hostname.
+2. DNS server resolves and returns an IPv4 address to the client. This address points to a machine running Gamma.
+3. Client connects to the machine running Gamma, and sends a handshake packet that includes the user-entered hostname ('server.com').
+4. While no upstream connection is established, Gamma buffers packets from the client and scans them for the hostname (and later username).
+5. Once the hostname is extracted, Gamma requests a config for the specified hostname.
+    1. _If no config for the hostname is found, Gamma responds with an "invalid hostname" MOTD/Disconnect message, and closes the connection._
+6. ConnectionRelay reads the hostname config and opens a connection to the specified host:port (+some other logic depending on config).
+7. The buffered handshake packets received from client earlier are forwarded to upstream server.
+8. ConnectionRelay enters 'forwarding' mode, and directly passes packets between upstream and downstream until one of the connections are closed.
+    1. _Packets are passed through PacketHandler instances registered with the Connection instance being read from before being forwarded._
 
+## More documentation coming soon!
+  
+  
 ### Similar Projects
-I would have to say that the biggest inspiration for this project would have to be [infrared](https://github.com/haveachin/infrared) by [haveachin](https://github.com/haveachin)
-
-### Notes
-- Proxy Protocol
-  - Please be aware that when `proxy-protocol` is enabled, the server that the players will be proxied to has to be able to understand and read the proxy protocol header. Without this, the server can't understand the packet and drops it. If you're using `Waterfall`, you can turn set `proxy-protocol: true` in config.yml. Other server types normally have plugins to parse this kind of data.
-  
-  
-### Getting Started
-1. Clone the repo in whatever environment you wish
-2. Install the following requirements: `requests`, `json`
-3. In the same directory as the `main.py` file, run `python3 main.py` and watch the magic happen!
-4. Give yourself a pat on the back :) 
-
-
-### The Connection Object
-
-|           Variable           |     Type      |                                               Description                                               |
-|:----------------------------:|:-------------:|:-------------------------------------------------------------------------------------------------------:|
-|      self.upstream_conn      | Socket Object |           The Socket object that contains the connection between the `server` and the `proxy`           |
-|     self.downstream_conn     | Socket Object |           The Socket object that contains the connection between the `player` and the `proxy`           |
-|   self.downstream_address    |     Tuple     |          A tuple that contains the `players` ip and port in the format `(ip: str, port: int)`           |
-|       self.conn_alive        |    Boolean    | Determines whether the connection is active or disconnected, `True = Connected`, `False = Disconnected` |
-|  self.upstream_packet_count  |    Integer    |                    The total number of packets transferred, from `Server` to `Gamma`                    |
-| self.downstream_packet_count |    Integer    |                    The total number of packets transferred from `Player` to `Gamma`                     |
-|     self.downstream_bandwidth      |    Integer    |         The total amount of bytes proxied from the `downstream` connection         |
-|     self.upstream_bandwidth      |    Integer    |         The total amount of bytes proxied from the `upstream` connection         |
-|      self.conn_hostname      |    String     |                  The hostname that the player has connected to from their server list                   |
-|     self.player_username     |    String     |              The username of the proxied player, can be None if a username isn't detected               |
+Gamma is partly inspired by [infrared](https://github.com/haveachin/infrared).
