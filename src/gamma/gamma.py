@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from gamma.netty.player_connection import PlayerConnection
+from gamma.config import LocalConfigManager
 from gamma.netty.server_connection import ServerConnection
 from gamma.netty.connection_relay import ConnectionRelay
 from gamma.gui.terminal import GammaTerminal
@@ -56,6 +57,7 @@ class Gamma:
             server_conn = ServerConnection(host='localhost', port=25560)
             # server_conn = ServerConnection(host='mc.playerservers.com', port=25565)
             relay = ConnectionRelay(id=self._conn_id_counter, downstream=player_conn, upstream=server_conn)
+            relay.config_manager = LocalConfigManager()
             self._conn_id_counter += 1
             # gamma.common.connections.append(relay)
             asyncio.create_task(relay.start())

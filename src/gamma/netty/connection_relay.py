@@ -4,15 +4,17 @@ import time
 from gamma.netty.connection import Connection
 from gamma.netty.player_connection import PlayerConnection, PlayerConnectionType
 from gamma.netty.server_connection import ServerConnection
+from gamma.config import BaseConfigManager, LocalConfigManager, ProxyConfig 
 from gamma.packet.player_handshake_handler import PlayerHandshakePacketHandler
 from gamma.response.invalid_hostname_motd import invalid_hostname_motd
 from gamma.response.invalid_hostname_disconnect import invalid_hostname_disconnect
+
 
 logger = logging.getLogger()
 
 
 class ConnectionRelay:
-    def __init__(self, id: int, downstream: PlayerConnection, upstream: ServerConnection):
+    def __init__(self, id: int, downstream:PlayerConnection, upstream:ServerConnection):
         self.id = id
         self.created_ts = time.time()
         self.downstream = downstream
@@ -21,6 +23,7 @@ class ConnectionRelay:
         self.total_bytes = 0
         self._connection_open = True
         self._last_bandwidth = 0
+        self.config_manager:BaseConfigManager = None
 
     async def start(self):
         logger.debug('Connection opened.')
@@ -56,32 +59,29 @@ class ConnectionRelay:
             data = await self.downstream.reader.read(8192)
             if not data:
                 raise EOFError()
-
             buffer += data
-
             # let handler inspect (no copy ideally)
-            if self.downstream._packet_handlers:
-                self.downstream._handle_packet(data)
+            if self.downstream._packet_handlers : self.downstream._handle_packet(data)
+            if self.downstream.type and self.downstream.hostname : break
 
-            if self.downstream.type and self.downstream.hostname:
-                break
+        if not self.config_manager:
+            logger.error('ConnectionRelay instance has no ConfigManager!')
+            raise Exception('ConnectionRelay instance has no ConfigManager!')
+        config = self.config_manager.get(self.downstream.hostname)
 
-        # handle invalid hostname
-        if self.downstream.hostname == 'localhost':
+        if not config:
             if self.downstream.type == PlayerConnectionType.PING:
                 logger.info(
                     f'Player ({self.downstream.host_addr}:{self.downstream.host_port}) '
                     f'PINGED INVALID HOSTNAME: {self.downstream.hostname}'
                 )
                 self.downstream.writer.write(invalid_hostname_motd())
-
             if self.downstream.type == PlayerConnectionType.PLAY:
                 logger.info(
                     f'Player ({self.downstream.host_addr}:{self.downstream.host_port}) '
                     f'JOINED INVALID HOSTNAME: {self.downstream.hostname}'
                 )
                 self.downstream.writer.write(invalid_hostname_disconnect())
-
             await self.downstream.writer.drain()
             return
 
@@ -100,6 +100,8 @@ class ConnectionRelay:
             )
 
         # connect upstream
+        self.upstream.host = config.host
+        self.upstream.port = config.port
         await self.upstream.start()
 
         # flush buffered handshake to upstream
