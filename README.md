@@ -9,7 +9,6 @@
 
 Gamma is a reverse proxy for Minecraft networks implemented in Python using asyncio. Gamma supports relaying traffic between multiple client connections to multiple servers. Players are proxied to the respective server depending on the hostname included in the first connection packet.
 
-&nbsp;
 
 ## Features
 | Status | Feature | Description |
@@ -19,8 +18,8 @@ Gamma is a reverse proxy for Minecraft networks implemented in Python using asyn
 | ✅ | Multiple&nbsp;Backends   |  Gamma supports multiple configured backends (Minecraft servers). |
 | ✅ | Packet&nbsp;Pipeline     |  Gamma allows users to easily implement PacketHandler subclasses and register them in the packet pipeline of any Connection object. |
 | ✅ | Packet&nbsp;Pipeline     |  Gamma allows users to easily implement PacketHandler subclasses and register them in the packet pipeline of any Connection object. |
+| ✅ | Config&nbsp;Manager      |  Backend configuration management has not been implemented in the async rewrite just yet. |
 | 🚧 | Proxy&nbsp;Protocol      |  Support for sending client addresses to upstream server using the `PROXY TCP4` header has not been implemented in the async rewrite just yet. |
-| 🚧 | Config&nbsp;Manager      |  Backend configuration management has not been implemented in the async rewrite just yet. |
 | ❌ | Terminal&nbsp;Interface  |  Terminal interface using the [Textual](https://github.com/textualize/textual) package that displays per-player or global connection information. |
 | ❌ | Docker Support           |  Docker containerization config (dockerfile)  |
 | ❌ | Crosstalk                |  Peer discovery and communication mechanism allowing your distributed Gamma instances discover and communicate player + network information with each-other.  |
